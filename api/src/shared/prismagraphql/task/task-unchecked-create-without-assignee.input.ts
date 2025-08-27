@@ -1,0 +1,42 @@
+import { Field } from '@nestjs/graphql';
+import { InputType } from '@nestjs/graphql';
+import { TaskStatus } from '../prisma/task-status.enum';
+import { TaskPriority } from '../prisma/task-priority.enum';
+import { TaskCommentUncheckedCreateNestedManyWithoutTaskInput } from '../task-comment/task-comment-unchecked-create-nested-many-without-task.input';
+
+@InputType()
+export class TaskUncheckedCreateWithoutAssigneeInput {
+
+    @Field(() => String, {nullable:true})
+    id?: string;
+
+    @Field(() => String, {nullable:false})
+    title!: string;
+
+    @Field(() => String, {nullable:true})
+    description?: string;
+
+    @Field(() => TaskStatus, {nullable:true})
+    status?: `${TaskStatus}`;
+
+    @Field(() => TaskPriority, {nullable:true})
+    priority?: `${TaskPriority}`;
+
+    @Field(() => Date, {nullable:true})
+    dueDate?: Date | string;
+
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+
+    @Field(() => Date, {nullable:true})
+    updatedAt?: Date | string;
+
+    @Field(() => String, {nullable:false})
+    createdBy!: string;
+
+    @Field(() => String, {nullable:false})
+    projectId!: string;
+
+    @Field(() => TaskCommentUncheckedCreateNestedManyWithoutTaskInput, {nullable:true})
+    comments?: TaskCommentUncheckedCreateNestedManyWithoutTaskInput;
+}

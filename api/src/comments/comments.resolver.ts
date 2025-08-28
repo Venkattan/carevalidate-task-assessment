@@ -1,12 +1,14 @@
 import { Resolver, Mutation, Args, Context, Subscription } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { PubSub } from 'graphql-subscriptions';
+import { SkipThrottle } from '@nestjs/throttler';
 import { CommentsService } from './comments.service';
 import { TasksService } from '../tasks/tasks.service';
 import { ProjectsService } from '../projects/projects.service';
 import { TaskComment } from '../tasks/dto/task.dto';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
 import { CommentAccessGuard } from '../auth/guards/comment-access.guard';
+import { MediumRateLimit } from '../common/decorators/rate-limit.decorator';
 
 const pubSub = new PubSub();
 
@@ -20,6 +22,7 @@ export class CommentsResolver {
 
   @Mutation(() => TaskComment)
   @UseGuards(GqlAuthGuard, CommentAccessGuard)
+  @MediumRateLimit() // 20 requests per minute for adding comments
   async addComment(
     @Args('taskId') taskId: string,
     @Args('content') content: string,
@@ -42,6 +45,7 @@ export class CommentsResolver {
       return payload.taskId === variables.taskId;
     },
   })
+  @SkipThrottle() // Skip throttling for real-time comments
   commentAdded(@Args('taskId') taskId: string) {
     return pubSub.asyncIterableIterator('commentAdded');
   }

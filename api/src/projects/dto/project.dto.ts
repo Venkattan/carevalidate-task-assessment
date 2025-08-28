@@ -1,6 +1,7 @@
 import { InputType, Field, ObjectType } from '@nestjs/graphql';
 import { IsNotEmpty, IsOptional } from 'class-validator';
 import { User } from '../../auth/dto/auth.type';
+import { Task } from '../../tasks/dto/task.dto';
 
 @InputType()
 export class CreateProjectInput {
@@ -32,4 +33,7 @@ export class Project {
 
   @Field(() => [User], { nullable: true })
   members?: User[];
+
+  @Field(() => [Task], { nullable: true })
+  tasks?: Task[];
 }

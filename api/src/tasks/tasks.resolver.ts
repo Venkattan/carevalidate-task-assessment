@@ -1,5 +1,6 @@
 import { Resolver, Query, Mutation, Args, Context, Subscription } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { PubSub } from 'graphql-subscriptions';
 import { TasksService } from './tasks.service';
 import { ProjectsService } from '../projects/projects.service';
@@ -15,6 +16,7 @@ import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
 import { ProjectMemberGuard } from '../auth/guards/project-member.guard';
 import { TaskAccessGuard } from '../auth/guards/task-access.guard';
 import { RequireProjectMember } from '../auth/decorators/project-member.decorator';
+import { MediumRateLimit, HighRateLimit, LowRateLimit } from '../common/decorators/rate-limit.decorator';
 
 const pubSub = new PubSub();
 
@@ -29,6 +31,7 @@ export class TasksResolver {
   @Mutation(() => Task)
   @UseGuards(GqlAuthGuard, ProjectMemberGuard)
   @RequireProjectMember()
+  @MediumRateLimit() // 20 requests per minute for task creation
   async createTask(
     @Args('input') createTaskInput: CreateTaskInput,
     @Context() context: any,
@@ -51,6 +54,7 @@ export class TasksResolver {
   @Query(() => TaskConnection)
   @UseGuards(GqlAuthGuard, ProjectMemberGuard)
   @RequireProjectMember()
+  @HighRateLimit() // 100 requests per minute for reading tasks
   async tasks(
     @Args('projectId') projectId: string,
     @Args('status', { nullable: true }) status?: TaskStatus,
@@ -69,12 +73,14 @@ export class TasksResolver {
 
   @Query(() => Task, { nullable: true })
   @UseGuards(GqlAuthGuard, TaskAccessGuard)
+  @HighRateLimit() // 100 requests per minute for reading individual tasks
   async task(@Args('id') id: string) {
     return this.tasksService.findOne(id);
   }
 
   @Mutation(() => Task)
   @UseGuards(GqlAuthGuard, TaskAccessGuard)
+  @MediumRateLimit() // 20 requests per minute for task updates
   async updateTask(
     @Args('id') id: string,
     @Args('input') updateTaskInput: UpdateTaskInput,
@@ -96,6 +102,7 @@ export class TasksResolver {
 
   @Mutation(() => Boolean)
   @UseGuards(GqlAuthGuard, TaskAccessGuard)
+  @LowRateLimit() // 5 requests per minute for task deletion (more restrictive)
   async deleteTask(@Args('id') id: string) {
     const task = await this.tasksService.findOne(id);
     if (!task) {
@@ -121,6 +128,7 @@ export class TasksResolver {
 
   @Mutation(() => Task)
   @UseGuards(GqlAuthGuard, TaskAccessGuard)
+  @MediumRateLimit() // 20 requests per minute for task assignment
   async assignTask(
     @Args('taskId') taskId: string,
     @Args('userId') userId: string,
@@ -140,12 +148,13 @@ export class TasksResolver {
     return updatedTask;
   }
 
-  // Subscriptions
+  // Subscriptions - Skip throttling for real-time features
   @Subscription(() => Task, {
     filter: (payload, variables) => {
       return payload.projectId === variables.projectId;
     },
   })
+  @SkipThrottle()
   taskCreated(@Args('projectId') projectId: string) {
     return pubSub.asyncIterableIterator('taskCreated');
   }
@@ -155,6 +164,7 @@ export class TasksResolver {
       return payload.projectId === variables.projectId;
     },
   })
+  @SkipThrottle()
   taskUpdated(@Args('projectId') projectId: string) {
     return pubSub.asyncIterableIterator('taskUpdated');
   }
@@ -164,6 +174,7 @@ export class TasksResolver {
       return payload.projectId === variables.projectId;
     },
   })
+  @SkipThrottle()
   taskDeleted(@Args('projectId') projectId: string) {
     return pubSub.asyncIterableIterator('taskDeleted');
   }

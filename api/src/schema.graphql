@@ -20,16 +20,6 @@ type AuthPayload {
   user: User!
 }
 
-type Project {
-  id: String!
-  name: String!
-  description: String
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  members: [User!]
-  tasks: [Task!]!
-}
-
 type Task {
   id: String!
   title: String!
@@ -86,6 +76,16 @@ type TaskConnection {
   edges: [TaskEdge!]!
   pageInfo: PageInfo!
   totalCount: Float!
+}
+
+type Project {
+  id: String!
+  name: String!
+  description: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  members: [User!]
+  tasks: [Task!]
 }
 
 type GraphQLPerformanceStats {
@@ -146,6 +146,32 @@ type SlowQueriesResponse {
   database: [SlowDatabaseQuery!]!
 }
 
+type RateLimitEndpointStats {
+  endpoint: String!
+  count: Int!
+}
+
+type RateLimitUserStats {
+  userId: String!
+  count: Int!
+}
+
+type RateLimitIPStats {
+  ip: String!
+  count: Int!
+}
+
+type RateLimitStats {
+  timeWindow: Int!
+  totalRequests: Int!
+  allowedRequests: Int!
+  blockedRequests: Int!
+  blockRate: Float!
+  topEndpoints: [RateLimitEndpointStats!]!
+  topUsers: [RateLimitUserStats!]!
+  topIPs: [RateLimitIPStats!]!
+}
+
 type Query {
   """Get performance statistics for GraphQL operations and database queries"""
   performanceStats(
@@ -161,6 +187,7 @@ type Query {
     """Maximum number of slow queries to return"""
     limit: Int! = 20
   ): SlowQueriesResponse!
+  rateLimitStats(timeWindow: Float! = 3600): RateLimitStats!
   me: User
   users: [User!]!
   user(id: String!): User
@@ -171,6 +198,7 @@ type Query {
 }
 
 type Mutation {
+  clearRateLimitStats: Boolean!
   register(input: RegisterInput!): AuthPayload!
   login(input: LoginInput!): AuthPayload!
   createProject(input: CreateProjectInput!): Project!

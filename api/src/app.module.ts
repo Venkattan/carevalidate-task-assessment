@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -12,10 +14,30 @@ import { CommentsModule } from './comments/comments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { DataLoaderModule } from './common/dataloader/dataloader.module';
 import { OptimizationModule } from './common/optimization.module';
+import { RateLimitModule } from './common/rate-limit/rate-limit.module';
 import { DataLoaderService } from './common/dataloader/dataloader.service';
+import { GqlThrottlerGuard } from './common/guards/graphql-throttler.guard';
 
 @Module({
   imports: [
+    // Rate limiting configuration
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000, // 1 second
+        limit: 10, // 10 requests per second
+      },
+      {
+        name: 'medium',
+        ttl: 10000, // 10 seconds
+        limit: 50, // 50 requests per 10 seconds
+      },
+      {
+        name: 'long',
+        ttl: 60000, // 1 minute
+        limit: 200, // 200 requests per minute
+      },
+    ]),
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
       imports: [DataLoaderModule],
@@ -50,6 +72,7 @@ import { DataLoaderService } from './common/dataloader/dataloader.service';
     PrismaModule,
     DataLoaderModule,
     OptimizationModule, // Add the optimization module
+    RateLimitModule, // Add the rate limit module
     AuthModule,
     UsersModule,
     ProjectsModule,
@@ -57,6 +80,12 @@ import { DataLoaderService } from './common/dataloader/dataloader.service';
     CommentsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: GqlThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

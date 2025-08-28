@@ -1,11 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  CreateTaskInput,
-  UpdateTaskInput,
-  TaskConnection,
-  TaskStatus,
-} from './dto/task.dto';
+import { CreateTaskInput, UpdateTaskInput, TaskConnection, TaskStatus } from './dto/task.dto';
 
 @Injectable()
 export class TasksService {
@@ -13,22 +8,15 @@ export class TasksService {
 
   // Helper to map Prisma task -> GraphQL Task type
   private mapTaskToGraphQL(task: any) {
-    const mappedComments = task.comments?.map((c: any) => ({
-      ...c,
-      // include author as returned by Prisma and add a task reference to satisfy TaskComment type
-      author: c.author,
-      task: task,
-    }));
-
     return {
       ...task,
       status: task.status as TaskStatus,
-      priority: task.priority,
+      priority: task.priority as any,
       description: task.description ?? undefined,
       dueDate: task.dueDate ?? undefined,
       assignedTo: task.assignedTo ?? undefined,
-      assignee: task.assignee ?? undefined,
-      comments: mappedComments,
+      // Field resolvers will handle these relationships:
+      // creator, assignee, project, comments
     };
   }
 
@@ -38,19 +26,9 @@ export class TasksService {
         ...createTaskInput,
         createdBy: creatorId,
       },
-      include: {
-        creator: true,
-        assignee: true,
-        project: true,
-        comments: {
-          include: {
-            author: true,
-          },
-        },
-      },
     });
 
-    // Map Prisma types to GraphQL types
+    // Return task without includes - field resolvers will handle relationships
     return this.mapTaskToGraphQL(task);
   }
 
@@ -71,16 +49,6 @@ export class TasksService {
     const [tasks, totalCount] = await Promise.all([
       this.prisma.task.findMany({
         where,
-        include: {
-          creator: true,
-          assignee: true,
-          project: true,
-          comments: {
-            include: {
-              author: true,
-            },
-          },
-        },
         orderBy: { createdAt: 'desc' },
         take: limit,
         skip: offset,
@@ -88,7 +56,7 @@ export class TasksService {
       this.prisma.task.count({ where }),
     ]);
 
-    // Map the Prisma types to our GraphQL types
+    // Map the Prisma types to our GraphQL types - field resolvers will handle relationships
     const edges = tasks.map((task, index) => ({
       node: this.mapTaskToGraphQL(task),
       cursor: Buffer.from(`${offset + index}`).toString('base64'),
@@ -112,22 +80,11 @@ export class TasksService {
   async findOne(id: string) {
     const task = await this.prisma.task.findUnique({
       where: { id },
-      include: {
-        creator: true,
-        assignee: true,
-        project: true,
-        comments: {
-          include: {
-            author: true,
-          },
-          orderBy: { createdAt: 'asc' },
-        },
-      },
     });
 
     if (!task) return null;
 
-    // Map Prisma types to GraphQL types
+    // Return task without includes - field resolvers will handle relationships
     return this.mapTaskToGraphQL(task);
   }
 
@@ -135,19 +92,9 @@ export class TasksService {
     const task = await this.prisma.task.update({
       where: { id },
       data: updateTaskInput,
-      include: {
-        creator: true,
-        assignee: true,
-        project: true,
-        comments: {
-          include: {
-            author: true,
-          },
-        },
-      },
     });
 
-    // Map Prisma types to GraphQL types
+    // Return task without includes - field resolvers will handle relationships
     return this.mapTaskToGraphQL(task);
   }
 
@@ -166,19 +113,9 @@ export class TasksService {
     const task = await this.prisma.task.update({
       where: { id: taskId },
       data: { assignedTo: userId },
-      include: {
-        creator: true,
-        assignee: true,
-        project: true,
-        comments: {
-          include: {
-            author: true,
-          },
-        },
-      },
     });
 
-    // Map Prisma types to GraphQL types
+    // Return task without includes - field resolvers will handle relationships
     return this.mapTaskToGraphQL(task);
   }
 }

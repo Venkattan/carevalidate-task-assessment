@@ -9,28 +9,45 @@ import { UsersModule } from './users/users.module';
 import { ProjectsModule } from './projects/projects.module';
 import { TasksModule } from './tasks/tasks.module';
 import { CommentsModule } from './comments/comments.module';
-import { PrismaService } from './prisma/prisma.service';
+import { PrismaModule } from './prisma/prisma.module';
+import { DataLoaderModule } from './common/dataloader/dataloader.module';
+import { DataLoaderService } from './common/dataloader/dataloader.service';
 
 @Module({
   imports: [
-    GraphQLModule.forRoot<ApolloDriverConfig>({
+    GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      autoSchemaFile: join(process.cwd(), 'src/schema.graphql'),
-      playground: process.env.NODE_ENV === 'development',
-      introspection: true,
-      subscriptions: {
-        'graphql-ws': true,
-        'subscriptions-transport-ws': true,
-      },
-      context: ({ req, connection }) => {
-        if (connection) {
-          // WebSocket context for subscriptions
-          return { req: connection.context };
-        }
-        // HTTP context for queries and mutations
-        return { req };
-      },
+      imports: [DataLoaderModule],
+      inject: [DataLoaderService],
+      useFactory: (dataLoaderService: DataLoaderService) => ({
+        autoSchemaFile: join(process.cwd(), 'src/schema.graphql'),
+        playground: process.env.NODE_ENV === 'development',
+        introspection: true,
+        subscriptions: {
+          'graphql-ws': true,
+          'subscriptions-transport-ws': true,
+        },
+        context: ({ req, connection }) => {
+          const baseContext = {
+            req: connection ? connection.context : req,
+            dataLoaders: dataLoaderService,
+          };
+
+          if (connection) {
+            // WebSocket context for subscriptions
+            return { 
+              ...baseContext,
+              req: connection.context,
+            };
+          }
+          
+          // HTTP context for queries and mutations
+          return baseContext;
+        },
+      }),
     }),
+    PrismaModule,
+    DataLoaderModule,
     AuthModule,
     UsersModule,
     ProjectsModule,
@@ -38,6 +55,6 @@ import { PrismaService } from './prisma/prisma.service';
     CommentsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
+  providers: [AppService],
 })
 export class AppModule {}

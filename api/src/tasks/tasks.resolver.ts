@@ -3,6 +3,7 @@ import { UseGuards } from '@nestjs/common';
 import { PubSub } from 'graphql-subscriptions';
 import { TasksService } from './tasks.service';
 import { ProjectsService } from '../projects/projects.service';
+import { DataLoaderService } from '../common/dataloader/dataloader.service';
 import {
   CreateTaskInput,
   UpdateTaskInput,
@@ -22,6 +23,7 @@ export class TasksResolver {
   constructor(
     private tasksService: TasksService,
     private projectsService: ProjectsService,
+    private dataLoaderService: DataLoaderService,
   ) {}
 
   @Mutation(() => Task)
@@ -33,6 +35,9 @@ export class TasksResolver {
   ) {
     const userId = context.req.user.id;
     const task = await this.tasksService.create(createTaskInput, userId);
+    
+    // Clear relevant caches
+    this.dataLoaderService.clearProjectCache(createTaskInput.projectId);
     
     // Publish task creation event
     pubSub.publish('taskCreated', {
@@ -76,10 +81,14 @@ export class TasksResolver {
   ) {
     const updatedTask = await this.tasksService.update(id, updateTaskInput);
     
+    // Clear relevant caches
+    this.dataLoaderService.clearTaskCache(id);
+    this.dataLoaderService.clearProjectCache(updatedTask.projectId);
+    
     // Publish task update event
     pubSub.publish('taskUpdated', {
       taskUpdated: updatedTask,
-      projectId: updatedTask.project.id,
+      projectId: updatedTask.projectId,
     });
 
     return updatedTask;
@@ -96,10 +105,14 @@ export class TasksResolver {
     const deleted = await this.tasksService.delete(id);
     
     if (deleted) {
+      // Clear relevant caches
+      this.dataLoaderService.clearTaskCache(id);
+      this.dataLoaderService.clearProjectCache(task.projectId);
+      
       // Publish task deletion event
       pubSub.publish('taskDeleted', {
         taskDeleted: id,
-        projectId: task.project.id,
+        projectId: task.projectId,
       });
     }
 
@@ -114,10 +127,14 @@ export class TasksResolver {
   ) {
     const updatedTask = await this.tasksService.assignTask(taskId, userId);
     
+    // Clear relevant caches
+    this.dataLoaderService.clearTaskCache(taskId);
+    this.dataLoaderService.clearProjectCache(updatedTask.projectId);
+    
     // Publish task update event
     pubSub.publish('taskUpdated', {
       taskUpdated: updatedTask,
-      projectId: updatedTask.project.id,
+      projectId: updatedTask.projectId,
     });
 
     return updatedTask;

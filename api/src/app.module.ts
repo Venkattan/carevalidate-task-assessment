@@ -11,6 +11,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { CommentsModule } from './comments/comments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { DataLoaderModule } from './common/dataloader/dataloader.module';
+import { OptimizationModule } from './common/optimization.module';
 import { DataLoaderService } from './common/dataloader/dataloader.service';
 
 @Module({
@@ -48,6 +49,7 @@ import { DataLoaderService } from './common/dataloader/dataloader.service';
     }),
     PrismaModule,
     DataLoaderModule,
+    OptimizationModule, // Add the optimization module
     AuthModule,
     UsersModule,
     ProjectsModule,

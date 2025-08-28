@@ -27,6 +27,7 @@ type Project {
   createdAt: DateTime!
   updatedAt: DateTime!
   members: [User!]
+  tasks: [Task!]!
 }
 
 type Task {
@@ -87,7 +88,79 @@ type TaskConnection {
   totalCount: Float!
 }
 
+type GraphQLPerformanceStats {
+  totalOperations: Int!
+  averageDuration: Float!
+  slowQueries: Int!
+  errorRate: Float!
+  topSlowOperations: [SlowOperation!]!
+}
+
+type DatabasePerformanceStats {
+  totalQueries: Int!
+  averageDuration: Float!
+  slowQueries: Int!
+  errorRate: Float!
+  topSlowTables: [SlowTable!]!
+}
+
+type SlowOperation {
+  operation: String!
+  averageDuration: Float!
+  count: Int!
+}
+
+type SlowTable {
+  table: String!
+  averageDuration: Float!
+  count: Int!
+}
+
+type PerformanceOverview {
+  graphql: GraphQLPerformanceStats!
+  database: DatabasePerformanceStats!
+}
+
+type SlowQuery {
+  operationType: String!
+  operationName: String!
+  duration: Float!
+  timestamp: DateTime!
+  success: Boolean!
+  errorMessage: String
+  userId: String
+}
+
+type SlowDatabaseQuery {
+  queryType: String!
+  tableName: String!
+  duration: Float!
+  timestamp: DateTime!
+  success: Boolean!
+  errorMessage: String
+  rowsAffected: Int
+}
+
+type SlowQueriesResponse {
+  graphql: [SlowQuery!]!
+  database: [SlowDatabaseQuery!]!
+}
+
 type Query {
+  """Get performance statistics for GraphQL operations and database queries"""
+  performanceStats(
+    """Time range in minutes to analyze"""
+    timeRangeMinutes: Int! = 60
+  ): PerformanceOverview!
+
+  """Get the slowest queries for analysis and optimization"""
+  slowQueries(
+    """Time range in minutes to analyze"""
+    limitMinutes: Int! = 60
+
+    """Maximum number of slow queries to return"""
+    limit: Int! = 20
+  ): SlowQueriesResponse!
   me: User
   users: [User!]!
   user(id: String!): User

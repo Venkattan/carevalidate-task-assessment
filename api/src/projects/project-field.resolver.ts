@@ -1,6 +1,7 @@
 import { Resolver, ResolveField, Parent, Context } from '@nestjs/graphql';
 import { Project } from './dto/project.dto';
 import { User } from '../auth/dto/auth.type';
+import { Task } from '../tasks/dto/task.dto';
 import { DataLoaderService } from '../common/dataloader/dataloader.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -29,5 +30,13 @@ export class ProjectFieldResolver {
     );
 
     return users.filter(user => user !== null);
+  }
+
+  @ResolveField(() => [Task])
+  async tasks(@Parent() project: Project, @Context() context: any): Promise<Task[]> {
+    const dataLoader = context.dataLoaders || this.dataLoaderService;
+    
+    // Use DataLoader to efficiently load tasks for this project
+    return dataLoader.tasksByProjectLoader.load(project.id);
   }
 }

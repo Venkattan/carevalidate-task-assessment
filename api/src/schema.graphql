@@ -1,0 +1,152 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type User {
+  id: String!
+  email: String!
+  name: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type AuthPayload {
+  access_token: String!
+  user: User!
+}
+
+type Project {
+  id: String!
+  name: String!
+  description: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  members: [User!]
+}
+
+type Task {
+  id: String!
+  title: String!
+  description: String
+  status: TaskStatus!
+  priority: TaskPriority!
+  dueDate: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  createdBy: String!
+  assignedTo: String
+  projectId: String!
+  creator: User!
+  assignee: User
+  project: Project!
+  comments: [TaskComment!]
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+type TaskComment {
+  id: String!
+  content: String!
+  createdAt: DateTime!
+  author: User!
+  task: Task!
+}
+
+type TaskEdge {
+  node: Task!
+  cursor: String!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type TaskConnection {
+  edges: [TaskEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Float!
+}
+
+type Query {
+  me: User
+  users: [User!]!
+  user(id: String!): User
+  projects: [Project!]!
+  project(id: String!): Project
+  tasks(projectId: String!, status: String, assignedTo: String, limit: Float! = 10, offset: Float! = 0): TaskConnection!
+  task(id: String!): Task
+}
+
+type Mutation {
+  register(input: RegisterInput!): AuthPayload!
+  login(input: LoginInput!): AuthPayload!
+  createProject(input: CreateProjectInput!): Project!
+  addProjectMember(projectId: String!, userId: String!): Project!
+  createTask(input: CreateTaskInput!): Task!
+  updateTask(id: String!, input: UpdateTaskInput!): Task!
+  deleteTask(id: String!): Boolean!
+  assignTask(taskId: String!, userId: String!): Task!
+  addComment(taskId: String!, content: String!): TaskComment!
+}
+
+input RegisterInput {
+  email: String!
+  password: String!
+  name: String!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input CreateProjectInput {
+  name: String!
+  description: String
+}
+
+input CreateTaskInput {
+  title: String!
+  description: String
+  status: TaskStatus! = TODO
+  priority: TaskPriority! = MEDIUM
+  dueDate: DateTime
+  projectId: String!
+  assignedTo: String
+}
+
+input UpdateTaskInput {
+  title: String
+  description: String
+  status: TaskStatus
+  priority: TaskPriority
+  dueDate: DateTime
+  assignedTo: String
+}
+
+type Subscription {
+  taskCreated(projectId: String!): Task!
+  taskUpdated(projectId: String!): Task!
+  taskDeleted(projectId: String!): String!
+  commentAdded(taskId: String!): TaskComment!
+}

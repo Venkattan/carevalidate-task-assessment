@@ -17,7 +17,7 @@ export class ProjectMemberGuard implements CanActivate {
     }
 
     // Extract projectId from various possible argument locations
-    const projectId = args.projectId || args.input?.projectId;
+    const projectId = args.projectId || args.id || args.input?.projectId;
     if (!projectId) {
       return false;
     }

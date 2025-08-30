@@ -50,9 +50,8 @@ import { GqlThrottlerGuard } from './common/guards/graphql-throttler.guard';
           'graphql-ws': true,
           'subscriptions-transport-ws': true,
         },
-        context: ({ req, connection }) => {
+        context: ({ req, res, connection }) => {
           const baseContext = {
-            req: connection ? connection.context : req,
             dataLoaders: dataLoaderService,
           };
 
@@ -60,12 +59,17 @@ import { GqlThrottlerGuard } from './common/guards/graphql-throttler.guard';
             // WebSocket context for subscriptions
             return { 
               ...baseContext,
-              req: connection.context,
+              req: connection.context.req || connection.context,
+              res,
             };
           }
           
           // HTTP context for queries and mutations
-          return baseContext;
+          return {
+            ...baseContext,
+            req,
+            res,
+          };
         },
       }),
     }),
